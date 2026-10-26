@@ -1,10 +1,18 @@
 Remove existing Software Deployment:
 
 1. Under the existing SentinelOne GPO, navigate to:
-   Computer Configuration > Policies > Software Settings > Software Installation
+   Computer Configuration > Policies > Software Settings > Software Installation
 2. Right-click the package, then under "All Tasks" select "Remove...".
 3. On the popup, select:
-   "Allow users to continue to use the software, but prevent new installations"
+   "Allow users to continue to use the software, but prevent new installations"
+
+
+
+
+Copy files to NETLOGON
+
+Copy Install-SentinelOne.ps1 and the SentinelOne installer MSI to:
+   \\DOMAIN.TLD\NETLOGON\S1\
 
 
 
@@ -12,41 +20,52 @@ Remove existing Software Deployment:
 Scheduled Task (Preferred)
 
 1. Under the existing SentinelOne GPO, navigate to:
-   Computer Configuration > Preferences > Control Panel Settings > Scheduled Tasks
+   Computer Configuration > Preferences > Control Panel Settings > Scheduled Tasks
 
 2. In the empty right-hand pane, right-click and select:
-   New > Scheduled Task (At least Windows 7)
+   New > Scheduled Task (At least Windows 7)
 
 3. Under the "General" tab:
-   - Set the name to "Tenax S1 Deploy"
-   - Set the user running the task to "SYSTEM"
-   - Select "Run whether user is logged on or not"
-   - Check "Run with highest privileges"
-   - Set "Configure for" to Windows 7 or newer
+   - Set the name to "Tenax S1 Deploy"
+   - Set the user running the task to "SYSTEM"
+   - Select "Run whether user is logged on or not"
+   - Check "Run with highest privileges"
+   - Set "Configure for" to Windows 7 or newer
 
 4. Under the "Triggers" tab:
-   - Set the task to run on a daily schedule
-   - Set "Recur every" to 1 day
-   - Set "Delay task for up to (random delay)" to 1 minute
-   - Ensure "Enabled" is checked
+   - Set the task to run on a daily schedule
+   - Set "Recur every" to 1 day
+   - Set "Delay task for up to (random delay)" to 1 minute
+   - Ensure "Enabled" is checked
 
 5. Under the "Actions" tab:
-   - Set the action type to "Start a program"
-   - Set the program/script to:
-     powershell.exe
-   - Set the arguments to:
-     -NoProfile -ExecutionPolicy Bypass -File "\\DOMAIN\NETLOGON\S1\Install-SentinelOne.ps1" -InstallerPath "\\DOMAIN\NETLOGON\S1\SentinelInstaller_windows_64bit_v<VERSION>.msi" -SiteToken "<SITE_TOKEN>"
+   - Set the action type to "Start a program"
+   - Set the program/script to:
+     powershell.exe
+   - Set the arguments to (replace DOMAIN.TLD, <VERSION> and S1_TOKEN):
+     -NoProfile -ExecutionPolicy Bypass -File "\\DOMAIN.TLD\NETLOGON\S1\Install-SentinelOne.ps1" -InstallerPath "\\DOMAIN.TLD\NETLOGON\S1\SentinelInstaller_windows_64bit_v<VERSION>.msi" -SiteToken "S1_TOKEN"
 
 6. Under the "Conditions" tab:
-   - Uncheck "Start the task only if the computer is on AC power"
-   - Uncheck "Stop if the computer switches to battery power"
+   - Uncheck "Start the task only if the computer is on AC power"
+   - Uncheck "Stop if the computer switches to battery power"
 
 7. Under the "Settings" tab:
-   - Set "Stop the task if it runs longer than" to 1 hour (
+   - Set "Stop the task if it runs longer than" to 1 hour
 
 
 
 
-Import GPO from Zip file
+Import GPO from Zip file (alternative to building the task by hand)
 
-Import-GPO -BackupId "C452D176-8E49-410C-9AB7-37644442F6B2D" -Path "C:\backup" -TargetName "SentinelOne" -CreateIfNeeded
+1. Extract SentinelOne-ScheduledTask.zip to C:\backup
+   (C:\backup should contain manifest.xml and the {C452D176-...} folder).
+
+2. Import it:
+   Import-GPO -BackupId "C452D176-8E49-410C-9AB7-3764442F6B2D" -Path "C:\backup" -TargetName "SentinelOne" -CreateIfNeeded
+
+3. Edit the imported "Tenax S1 Deploy" task (Actions tab) and replace the placeholders:
+   - DOMAIN.TLD -> your domain (e.g. contoso.local)
+   - S1_TOKEN   -> the site token from the SentinelOne console
+   The installer file name in the task is for v26.2.3.158; update it if you use a different version.
+
+4. Link the GPO to the OUs that should get SentinelOne.
